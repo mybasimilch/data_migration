@@ -1,12 +1,9 @@
 import csv
 import os
-from django.core.management.base import BaseCommand
+from basimilch.management.commands.import_data import Command as CustomCommand
 
 
-class Command(BaseCommand):
-
-    def add_arguments(self, parser):
-        parser.add_argument('files', nargs='+', type=str)
+class Command(CustomCommand):
 
     @staticmethod
     def clean_row(row):
