@@ -17,20 +17,23 @@ class Command(CustomCommand):
     migration_job_type = jm.JobType.objects.get(name='Vergangener Job')
 
     def parse_row(self, row):
-        if row['date'] == '2019':
+        time = row['date']
+        if time == '30.12.1899':
             return None
-        else:
-            rv = {** row}
-            time = datetime.strptime(row['date'], '%d/%m/%Y')
-            time = time.replace(tzinfo=pytz.timezone('Europe/Zurich'))
-            recurring_job = jm.RecuringJob.objects.filter(time=time, type=self.migration_job_type).first()
-            if not recurring_job:
-                recurring_job = jm.RecuringJob.objects.create(time=time, type=self.migration_job_type, slots=0)
-            recurring_job.slots += 1
-            recurring_job.save()
-            rv['job_id'] = recurring_job.id
-            rv['amount'] = 1
-            del rv['date']
+        try:
+            time = datetime.strptime(row['date'], '%d.%m.%Y')
+        except ValueError:
+            time = datetime.strptime('01.01.2019', '%d.%m.%Y')
+        rv = {** row}
+        time = time.replace(tzinfo=pytz.timezone('Europe/Zurich'))
+        recurring_job = jm.RecuringJob.objects.filter(time=time, type=self.migration_job_type).first()
+        if not recurring_job:
+            recurring_job = jm.RecuringJob.objects.create(time=time, type=self.migration_job_type, slots=0)
+        recurring_job.slots += 1
+        recurring_job.save()
+        rv['job_id'] = recurring_job.id
+        rv['amount'] = 1
+        del rv['date']
         return rv
 
     def handle(self, *args, **options):
