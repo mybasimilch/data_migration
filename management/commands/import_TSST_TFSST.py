@@ -3,7 +3,7 @@ import re
 
 from django.db import IntegrityError
 
-from basimilch.management.commands.import_data import Command as CustomCommand
+from .import_data import Command as CustomCommand
 from juntagrico import models as jm
 
 
@@ -11,6 +11,7 @@ class Command(CustomCommand):
     """
     Basecommand to insert TSST and TFSST many-to-many tables from a csv file into the database.
     """
+    table = jm.TFSST
 
     def parse_row(self, row):
         rows = []
@@ -27,12 +28,11 @@ class Command(CustomCommand):
             )
         return rows
 
-    def insert_rows_in_db(self, rows):
+    def insert_rows_in_db(self, rows, **options):
         for r in rows:
             r = self.resolve_foreign_keys(r)
             try:
-                jm.TSST.objects.update_or_create(**r)
-                jm.TFSST.objects.update_or_create(**r)
+                self.delete_old_and_insert(r, **options)
             except IntegrityError:
                 print(f"{r} already in DB")
 
@@ -41,5 +41,6 @@ class Command(CustomCommand):
             with open(f, newline="", encoding="utf-8-sig") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
+                    row = self.clean_2019(row)
                     parsed = self.parse_row(row)
-                    self.insert_rows_in_db(parsed)
+                    self.insert_rows_in_db(parsed, **options)

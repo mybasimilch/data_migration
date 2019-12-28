@@ -14,8 +14,15 @@ class Command(BaseCommand):
     refers to a table either in Juntagrico or in Juntagrico_Custom_Sub
     """
 
+    table = None
+
     def add_arguments(self, parser):
         parser.add_argument('files', nargs='+', type=str)
+        parser.add_argument(
+            '--update_by',
+            # action='store_true',
+            help='Update? If not specified new entries are appended.',
+        )
 
     @staticmethod
     def name_to_model(table_name):
@@ -25,6 +32,24 @@ class Command(BaseCommand):
             return getattr(csm, table_name)
         else:
             raise ValueError(f'{table_name} could not be associated with a model')
+
+    def delete_old_and_insert(self, row, **options):
+        if 'update_by' in options:
+            # key = options['update_by']
+            # dikt = {key: row[key]k}
+            # old_entries = self.table.objects.filter(**dikt)
+            # old_entries.delete()
+            obj = self.table.objects.create(**row)
+            obj.save()
+        else:
+            self.table.objects.update_or_create(**row)
+
+    @staticmethod
+    def clean_2019(row):
+        rv = {**row}
+        if 'member_2019' in rv:
+            rv.pop('member_2019')
+        return rv
 
     def resolve_foreign_keys(self, row):
         rv = {}
@@ -56,6 +81,7 @@ class Command(BaseCommand):
             with open(f, newline='', encoding="utf-8-sig") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
+                    row = self.clean_2019(row)
                     row = self.resolve_foreign_keys(row)
                     try:
                         table.objects.update_or_create(**row)
