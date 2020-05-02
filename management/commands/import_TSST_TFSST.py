@@ -4,14 +4,14 @@ import re
 from django.db import IntegrityError
 
 from .import_data import Command as CustomCommand
-from juntagrico import models as jm
+from juntagrico import entity as je
 
 
 class Command(CustomCommand):
     """
     Basecommand to insert TSST and TFSST many-to-many tables from a csv file into the database.
     """
-    table = jm.TFSST
+    table = je.subtypes.TFSST
 
     def parse_row(self, row):
         rows = []

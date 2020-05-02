@@ -4,7 +4,6 @@ from juntagrico_custom_sub import models as csm
 from django.db import IntegrityError
 
 
-
 class Command(CustomCommand):
     table = csm.SubscriptionContentItem
 

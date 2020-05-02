@@ -2,8 +2,11 @@ import csv
 import os
 from django.core.management.base import BaseCommand
 from django.db import IntegrityError
-from juntagrico import models as jm
+from juntagrico import entity as je
 from juntagrico_custom_sub import models as csm
+from juntagrico.lifecycle import sub
+import juntagrico.entity.subs 
+from juntagrico.entity import subs
 
 
 class Command(BaseCommand):
@@ -16,6 +19,13 @@ class Command(BaseCommand):
 
     table = None
 
+    juntagrico_tables = {
+        "Depot": je.depot.Depot,
+        "Member": je.member.Member,
+        "Subscription": je.subs.Subscription,
+        "SubscriptionType": je.subtypes.SubscriptionType
+    }
+
     def add_arguments(self, parser):
         parser.add_argument('files', nargs='+', type=str)
         parser.add_argument(
@@ -24,10 +34,9 @@ class Command(BaseCommand):
             help='Update? If not specified new entries are appended.',
         )
 
-    @staticmethod
-    def name_to_model(table_name):
-        if hasattr(jm, table_name):
-            return getattr(jm, table_name)
+    def name_to_model(self, table_name):
+        if table_name in self.juntagrico_tables:
+            return self.juntagrico_tables[table_name]
         elif hasattr(csm, table_name):
             return getattr(csm, table_name)
         else:
