@@ -29,9 +29,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('files', nargs='+', type=str)
         parser.add_argument(
-            '--update_by',
-            # action='store_true',
-            help='Update? If not specified new entries are appended.',
+            '--ignore-if-key-exists',
         )
 
     def name_to_model(self, table_name):
@@ -52,6 +50,12 @@ class Command(BaseCommand):
             obj.save()
         else:
             self.table.objects.update_or_create(**row)
+
+    @staticmethod
+    def ignore_existing(table, row, key):
+        rv = table.objects.filter(**{key: row[key]})
+        if not len(rv):
+            return row
 
     @staticmethod
     def clean_2019(row):
@@ -90,9 +94,14 @@ class Command(BaseCommand):
             with open(f, newline='', encoding="utf-8-sig") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
-                    row = self.clean_2019(row)
+                    # row = self.clean_2019(row)
                     row = self.resolve_foreign_keys(row)
+                    if options['ignore_if_key_exists']:
+                        key = options['ignore_if_key_exists']
+                        row = self.ignore_existing(table, row, key)
+                        if not row:
+                            continue
                     try:
                         table.objects.update_or_create(**row)
-                    except IntegrityError:
-                        print(f'{row} already in DB')
+                    except Exception as e:
+                        print(f'{row} exception: {e}')
