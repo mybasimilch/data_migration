@@ -1,12 +1,12 @@
 import csv
 import os
+from datetime import datetime
+
+import pytz
 from django.core.management.base import BaseCommand
-from django.db import IntegrityError
-from juntagrico import entity as je
 from juntagrico_custom_sub import models as csm
-from juntagrico.lifecycle import sub
-import juntagrico.entity.subs 
-from juntagrico.entity import subs
+
+from juntagrico import entity as je
 
 
 class Command(BaseCommand):
@@ -23,13 +23,17 @@ class Command(BaseCommand):
         "Depot": je.depot.Depot,
         "Member": je.member.Member,
         "Subscription": je.subs.Subscription,
-        "SubscriptionType": je.subtypes.SubscriptionType
+        "SubscriptionType": je.subtypes.SubscriptionType,
+        "Share": je.share.Share
     }
 
     def add_arguments(self, parser):
         parser.add_argument('files', nargs='+', type=str)
         parser.add_argument(
             '--ignore-if-key-exists',
+        )
+        parser.add_argument(
+            '--datetime_keys', nargs='+', type=str
         )
 
     def name_to_model(self, table_name):
@@ -50,6 +54,18 @@ class Command(BaseCommand):
             obj.save()
         else:
             self.table.objects.update_or_create(**row)
+
+    @staticmethod
+    def parse_time(row, keys):
+        rv = {**row}
+        for k in keys:
+            if rv[k] != 'NULL':
+                time = datetime.strptime(rv[k][0:10], '%Y-%m-%d')
+                time = pytz.timezone('Europe/Zurich').localize(time)
+            else:
+                time = None
+            rv[k] = time
+        return rv
 
     @staticmethod
     def ignore_existing(table, row, key):
@@ -101,6 +117,9 @@ class Command(BaseCommand):
                         row = self.ignore_existing(table, row, key)
                         if not row:
                             continue
+                    if options['datetime_keys']:
+                        keys = options['datetime_keys']
+                        row = self.parse_time(row, keys)
                     try:
                         table.objects.update_or_create(**row)
                     except Exception as e:
