@@ -103,9 +103,16 @@ class Command(BaseCommand):
                 rv[cell[0]] = cell[1]
         return rv
 
+    @staticmethod
+    def put_in_db(table, row):
+        table.objects.update_or_create(**row)
+
     def handle(self, *args, **options):
         for f in options['files']:
-            table_name = os.path.basename(f).split('.')[0]
+            if options['table_name']:
+                table_name = options['table_name']
+            else:
+                table_name = os.path.basename(f).split('.')[0]
             table = self.name_to_model(table_name)
             with open(f, newline='', encoding="utf-8-sig") as csvfile:
                 reader = csv.DictReader(csvfile)
@@ -121,6 +128,6 @@ class Command(BaseCommand):
                         keys = options['datetime_keys']
                         row = self.parse_time(row, keys)
                     try:
-                        table.objects.update_or_create(**row)
+                        self.put_in_db(table, row)
                     except Exception as e:
                         print(f'{row} exception: {e}')
